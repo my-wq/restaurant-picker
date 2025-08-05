@@ -130,11 +130,7 @@ A: 可能是搜索范围太小，建议扩大搜索范围到1-5公里。
 **Q: 支持哪些地区？**
 A: 基于高德地图API，主要支持中国大陆地区。
 
-## 📞 联系方式
 
-- 🌐 **官网**: [xuanmojinxue.com](https://xuanmojinxue.com)
-- 📧 **邮箱**: contact@xuanmojinxue.com
-- 🐛 **问题反馈**: [GitHub Issues](https://github.com/yourusername/restaurant-picker/issues)
 
 ## 📄 许可证
 
