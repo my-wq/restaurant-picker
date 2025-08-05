@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>随机选饭店工具 - 智能餐厅推荐助手</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="智能随机选饭店工具，支持地图定位、范围搜索、分类筛选，帮您快速找到附近的优质餐厅。告别选择困难症！">
+    <meta name="keywords" content="选饭店,餐厅推荐,随机推荐,地图搜索,美食,附近餐厅">
+    <meta name="author" content="玄墨烬雪">
+    
+    <!-- Open Graph Meta Tags for social sharing -->
+    <meta property="og:title" content="随机选饭店工具 - 智能餐厅推荐助手">
+    <meta property="og:description" content="智能随机选饭店工具，支持地图定位、范围搜索、分类筛选，帮您快速找到附近的优质餐厅。告别选择困难症！">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xuanmojinxue.com">
+    <meta property="og:site_name" content="玄墨金学">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOCIgZmlsbD0iIzAwNzhkNCIvPgo8dGV4dCB4PSIxNiIgeT0iMjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7ppoE8L3RleHQ+Cjwvc3ZnPgo=">
+    
+    <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f7f7f7; margin: 0; }
+        .container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #ccc; padding: 24px; }
+        h2 { text-align: center; color: #333; }
+        .btn { display: block; margin: 20px auto 0; padding: 10px 24px; background: #0078d4; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        .btn:hover { background: #005fa3; }
+        .restaurant-list { margin-top: 24px; }
+        .restaurant { background: #f2f6fa; border-radius: 8px; margin-bottom: 16px; padding: 16px; box-shadow: 0 1px 4px #e0e0e0; }
+        .restaurant-title { font-size: 18px; font-weight: bold; color: #0078d4; }
+        .restaurant-info { font-size: 14px; color: #555; margin-top: 6px; }
+        #pagination { text-align: center; margin: 12px 0; }
+        #pagination button { margin: 0 8px; padding: 6px 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>随机选饭店工具</h2>
+        <!-- 地址输入区 -->
+        <div style="margin-bottom:12px;text-align:center;">
+            <label for="addressInput">地址/地标：</label>
+            <input type="text" id="addressInput" placeholder="输入地址/地标/坐标" style="width:220px;padding:6px;border-radius:6px;border:1px solid #ccc;">
+            <div id="addressSuggest" style="background:#fff;border:1px solid #ccc;border-radius:6px;max-height:120px;overflow-y:auto;position:absolute;z-index:10;width:220px;display:none;"></div>
+        </div>
+        <!-- 范围输入区 -->
+        <div style="margin-bottom:12px;text-align:center;">
+            <label for="radiusInput">搜索范围：</label>
+            <input type="text" id="radiusInput" value="2公里" style="width:80px;padding:6px;border-radius:6px;border:1px solid #ccc;">
+            <span id="radiusTip" style="color:#888;font-size:13px;margin-left:8px;"></span>
+        </div>
+        <!-- 地图选址区 -->
+        <div id="map" style="width:100%;height:300px;margin-bottom:16px;border-radius:8px;"></div>
+        <div style="text-align:center;margin-bottom:8px;">
+            <button class="btn" id="refreshBtn">重新选择</button>
+            <button class="btn" id="randomBtn" style="background:#28a745;margin-left:12px;">随机推荐</button>
+            <button class="btn" id="satelliteBtn" style="background:#aaa;margin-left:12px;">切换卫星/标准</button>
+        </div>
+        <div id="status" style="text-align:center;color:#888;margin-top:10px;"></div>
+        <!-- 分类筛选区 -->
+        <div id="categoryFilter" style="text-align:center;margin-bottom:8px;"></div>
+        <div class="restaurant-list" id="restaurantList"></div>
+        
+        <!-- 页脚信息 -->
+        <div style="text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid #eee;color:#999;font-size:12px;">
+            <p>© 2025 <a href="https://xuanmojinxue.com" style="color:#0078d4;text-decoration:none;">玄墨金学</a> | 智能餐厅推荐工具</p>
+            <p>数据来源：高德地图API | 仅供参考，请以实际情况为准</p>
+            <p style="margin-top:10px;">
+                <span>访问量：<span id="visitCount">加载中...</span></span> |
+                <a href="mailto:contact@xuanmojinxue.com" style="color:#0078d4;text-decoration:none;">意见反馈</a> |
+                <a href="#" onclick="showAbout()" style="color:#0078d4;text-decoration:none;">关于工具</a>
+            </p>
+        </div>
+    </div>
+    <!-- 高德地图API -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=f72ca59fa68ebfb555b09f8d2292b278"></script>
+    <script>
+        // 这里写所有JS代码，不要有任何HTML标签
+        // ...你的JS逻辑...
+    
+        let userLocation = null;
+        let currentQueryPoint = null;
+        let map, marker, satelliteMode = false;
+        let lastAddress = '';
+        let lastCategory = '';
+        let allRestaurants = []; // 存储所有搜索到的餐厅
+        let customCategories = ['烧烤','火锅','快餐','中餐','西餐','麻辣烫','小吃','咖啡厅','酒吧','酒楼','医疗类','商超类','教育机构','其他'];
+
+        // 初始化高德地图
+        function initMap() {
+            map = new AMap.Map('map', {
+                center: [121.4847, 31.2401],
+                zoom: 13,
+                mapStyle: 'amap://styles/normal'
+            });
+            map.on('click', function(e) {
+                const lng = e.lnglat.getLng();
+                const lat = e.lnglat.getLat();
+                if (marker) { marker.setMap(null); }
+                marker = new AMap.Marker({ position: [lng, lat] });
+                marker.setMap(map);
+                getAddressByCoord(lat, lng, function(addr){
+                    document.getElementById('addressInput').value = addr;
+                    lastAddress = addr;
+                });
+                showStatus(`已选定地图点：纬度${lat.toFixed(6)}，经度${lng.toFixed(6)}`);
+                currentQueryPoint = {lat, lng};
+                searchNearbyRestaurants(lat, lng);
+            });
+        }
+
+        function getLocationAndRecommend() {
+            if (!navigator.geolocation) {
+                showStatus("无法获取地理位置，浏览器不支持地理位置API。可手动输入地标或坐标。");
+                return;
+            }
+            showStatus("正在获取您的位置...");
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    userLocation = pos.coords;
+                    showStatus(`已获取位置：纬度${userLocation.latitude.toFixed(4)}，经度${userLocation.longitude.toFixed(4)}`);
+                    currentQueryPoint = {lat: userLocation.latitude, lng: userLocation.longitude};
+                    map.setCenter([userLocation.longitude, userLocation.latitude]);
+                    if (marker) { marker.setMap(null); }
+                    marker = new AMap.Marker({ position: [userLocation.longitude, userLocation.latitude] });
+                    marker.setMap(map);
+                    getAddressByCoord(userLocation.latitude, userLocation.longitude, function(addr){
+                        document.getElementById('addressInput').value = addr;
+                        lastAddress = addr;
+                    });
+                    searchNearbyRestaurants(userLocation.latitude, userLocation.longitude);
+                },
+                err => {
+                    showStatus("位置获取失败，可手动输入地标或坐标。");
+                },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        }
+
+        // 随机推荐功能
+        function showRandomRecommendation() {
+            if (allRestaurants.length === 0) {
+                showStatus('❌ 请先获取附近餐厅信息');
+                return;
+            }
+            
+            // 随机选择一家餐厅
+            const randomIndex = Math.floor(Math.random() * allRestaurants.length);
+            const randomRestaurant = allRestaurants[randomIndex];
+            
+            // 创建随机推荐的弹窗
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 300px;
+                text-align: center;
+                border: 2px solid #e74c3c;
+            `;
+            
+            popup.innerHTML = `
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">🎲 随机推荐</h3>
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333;">${randomRestaurant.name}</div>
+                <div style="color: #666; margin-bottom: 8px;">类型: ${getCustomType(randomRestaurant.typecode) || '餐厅'}</div>
+                <div style="color: #666; margin-bottom: 8px;">地址: ${randomRestaurant.address || '未知'}</div>
+                <div style="color: #666; margin-bottom: 15px;">距离: ${randomRestaurant.distance ? (randomRestaurant.distance + 'm') : '未知'}</div>
+                <div>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background:#6c757d;color:white;border:none;padding:8px 16px;border-radius:4px;margin-right:10px;cursor:pointer;">关闭</button>
+                    <button onclick="window.open('https://uri.amap.com/marker?position=${randomRestaurant.location}&name=${encodeURIComponent(randomRestaurant.name)}&src=myapp')" style="background:#28a745;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">导航</button>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+            
+            // 创建背景遮罩
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+            `;
+            overlay.onclick = () => {
+                popup.remove();
+                overlay.remove();
+            };
+            document.body.appendChild(overlay);
+            
+            // 8秒后自动关闭
+            setTimeout(() => {
+                if (popup.parentElement) {
+                    popup.remove();
+                    overlay.remove();
+                }
+            }, 8000);
+        }
+
+        function searchNearbyRestaurants(lat, lng) {
+            let radiusRaw = document.getElementById('radiusInput').value.trim();
+            let radius = parseRadius(radiusRaw);
+            let pageSize = 20; // 高德API最大20
+            let results = [];
+            const listDiv = document.getElementById('restaurantList');
+            listDiv.innerHTML = '<div style="text-align:center;color:#888;">正在加载餐厅...</div>';
+            
+            console.log(`搜索参数: 输入范围="${radiusRaw}", 解析后范围=${radius}米 (${(radius/1000).toFixed(1)}公里)`);
+            showStatus(`🔍 正在搜索${(radius/1000).toFixed(1)}公里范围内的餐厅...`);
+
+            // 自动循环请求所有页
+            (async function fetchAllPages() {
+                let page = 1;
+                let allPois = [];
+                let hasMore = true;
+                showStatus('正在搜索餐厅...');
+                
+                while (hasMore && page <= 10) { // 增加到最多10页，每页20个，最多200家餐厅
+                    const url = `https://restapi.amap.com/v3/place/around?key=f72ca59fa68ebfb555b09f8d2292b278&location=${lng},${lat}&types=050000&radius=${Math.round(radius)}&offset=${pageSize}&page=${page}`;
+                    console.log(`第${page}页请求URL: ${url}`);
+                    try {
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        
+                        console.log(`第${page}页API响应:`, data);
+                        console.log(`API返回的餐厅数量: ${data.pois ? data.pois.length : 0}`);
+                        
+                        if (data.pois && data.pois.length > 0) {
+                            // 不再进行额外的距离过滤，因为API已经根据radius参数过滤了
+                            allPois = allPois.concat(data.pois);
+                            console.log(`第${page}页：获取到${data.pois.length}家餐厅，总计${allPois.length}家`);
+                            
+                            // 如果这一页的数据少于pageSize，说明没有更多数据了
+                            if (data.pois.length < pageSize) {
+                                hasMore = false;
+                            }
+                            page++;
+                        } else {
+                            hasMore = false;
+                        }
+                    } catch (error) {
+                        console.error('API请求失败:', error);
+                        showStatus("餐厅数据获取失败。");
+                        hasMore = false;
+                    }
+                }
+                
+                results = allPois;
+                allRestaurants = results; // 确保全局变量正确赋值
+                window._lastRestaurants = results;
+                
+                if (results.length === 0) {
+                    showStatus(`在${(radius/1000).toFixed(1)}公里范围内未找到餐厅，请尝试扩大搜索范围。`);
+                    listDiv.innerHTML = '<div style="text-align:center;color:#888;">未找到餐厅</div>';
+                } else {
+                    showRestaurants(results);
+                    showStatus(`✅ 在${(radius/1000).toFixed(1)}公里范围内找到${results.length}家餐厅，已全部显示。`);
+                }
+                renderPagination(1, 1);
+            })();
+        }
+
+        // 地址输入智能联想
+        document.getElementById('addressInput').addEventListener('input', function(e){
+            let val = e.target.value.trim();
+            if (!val) {
+                document.getElementById('addressSuggest').style.display = 'none';
+                return;
+            }
+            // 高德输入提示API
+            fetch(`https://restapi.amap.com/v3/assistant/inputtips?key=f72ca59fa68ebfb555b09f8d2292b278&keywords=${encodeURIComponent(val)}&city=`)
+                .then(res=>res.json())
+                .then(data=>{
+                    let suggestDiv = document.getElementById('addressSuggest');
+                    suggestDiv.innerHTML = '';
+                    if (data.tips && data.tips.length > 0) {
+                        data.tips.forEach(tip=>{
+                            let item = document.createElement('div');
+                            item.style = 'padding:6px;cursor:pointer;';
+                            item.textContent = `${tip.name}${tip.district?(' - '+tip.district):''}`;
+                            item.onclick = function(){
+                                document.getElementById('addressInput').value = tip.name;
+                                suggestDiv.style.display = 'none';
+                                if (tip.location) {
+                                    let [lng,lat] = tip.location.split(',');
+                                    currentQueryPoint = {lat:parseFloat(lat),lng:parseFloat(lng)};
+                                    map.setCenter([parseFloat(lng),parseFloat(lat)]);
+                                    if (marker) { marker.setMap(null); }
+                                    marker = new AMap.Marker({ position: [parseFloat(lng),parseFloat(lat)] });
+                                    marker.setMap(map);
+                                    searchNearbyRestaurants(parseFloat(lat),parseFloat(lng));
+                                }
+                            };
+                            suggestDiv.appendChild(item);
+                        });
+                        suggestDiv.style.display = 'block';
+                    } else {
+                        suggestDiv.style.display = 'none';
+                    }
+                });
+        });
+        document.body.addEventListener('click', function(e){
+            if (!e.target.closest('#addressInput')) {
+                document.getElementById('addressSuggest').style.display = 'none';
+            }
+        });
+
+        // 地址输入回车支持坐标
+        document.getElementById('addressInput').addEventListener('keydown', function(e){
+            if (e.key === 'Enter') {
+                let val = e.target.value.trim();
+                // 支持坐标输入
+                let coordMatch = val.match(/^([0-9.]+)[,， ]+([0-9.]+)$/);
+                if (coordMatch) {
+                    let lat = parseFloat(coordMatch[1]);
+                    let lng = parseFloat(coordMatch[2]);
+                    currentQueryPoint = {lat, lng};
+                    map.setCenter([lng, lat]);
+                    if (marker) { marker.setMap(null); }
+                    marker = new AMap.Marker({ position: [lng, lat] });
+                    marker.setMap(map);
+                    searchNearbyRestaurants(lat, lng);
+                    return;
+                }
+                // 地址直接搜索
+                fetch(`https://restapi.amap.com/v3/geocode/geo?key=f72ca59fa68ebfb555b09f8d2292b278&address=${encodeURIComponent(val)}`)
+                    .then(res=>res.json())
+                    .then(data=>{
+                        if (data.geocodes && data.geocodes.length > 0) {
+                            let geo = data.geocodes[0];
+                            let [lng,lat] = geo.location.split(',');
+                            currentQueryPoint = {lat:parseFloat(lat),lng:parseFloat(lng)};
+                            map.setCenter([parseFloat(lng),parseFloat(lat)]);
+                            if (marker) { marker.setMap(null); }
+                            marker = new AMap.Marker({ position: [parseFloat(lng),parseFloat(lat)] });
+                            marker.setMap(map);
+                            searchNearbyRestaurants(parseFloat(lat),parseFloat(lng));
+                        } else {
+                            showStatus('地址无法识别，请输入更精确的地址或坐标');
+                        }
+                    });
+            }
+        });
+
+        // 地图卫星/标准切换
+        document.getElementById('satelliteBtn').onclick = function() {
+            satelliteMode = !satelliteMode;
+            map.setMapStyle(satelliteMode ? 'amap://styles/satellite' : 'amap://styles/normal');
+        };
+
+        // 范围输入支持单位自动识别
+        document.getElementById('radiusInput').addEventListener('input', function(e){
+            let val = e.target.value.trim();
+            let meters = parseRadius(val);
+            let tip = '';
+            if (meters < 500) tip = '范围较小，可能找到的餐厅较少';
+            else if (meters > 20000) tip = '范围较大，可能需要较长时间搜索';
+            else tip = `搜索半径: ${(meters/1000).toFixed(1)}公里，约覆盖${(Math.PI*meters*meters/1000000).toFixed(2)}平方公里`;
+            document.getElementById('radiusTip').textContent = tip;
+        });
+        function parseRadius(val) {
+            // 先检查是否包含公里单位
+            let isKilometer = /公里|km/i.test(val);
+            // 然后移除所有单位字符
+            val = val.replace(/米|m|公里|km/gi,'');
+            let num = parseFloat(val);
+            if (isNaN(num)) num = 2; // 默认2公里
+            // 如果是公里单位，转换为米
+            if (isKilometer) {
+                num *= 1000;
+            } else if (num < 50) {
+                // 如果数字太小且没有明确单位，假设是公里
+                num *= 1000;
+            }
+            // 限制范围在100米到50公里之间
+            return Math.max(100, Math.min(num, 50000));
+        }
+
+        // 逆地址解析
+        function getAddressByCoord(lat, lng, cb) {
+            fetch(`https://restapi.amap.com/v3/geocode/regeo?key=f72ca59fa68ebfb555b09f8d2292b278&location=${lng},${lat}`)
+                .then(res=>res.json())
+                .then(data=>{
+                    if (data.regeocode && data.regeocode.formatted_address) {
+                        cb(data.regeocode.formatted_address);
+                    } else {
+                        cb('');
+                    }
+                });
+        }
+
+        // 分类筛选区渲染
+        function renderCategoryFilter(typeMap) {
+            const filterDiv = document.getElementById('categoryFilter');
+            filterDiv.innerHTML = '';
+            let types = Object.keys(typeMap);
+            if (types.length > 1) {
+                let html = '筛选分类：<select id="categorySel" style="padding:6px 12px;border-radius:6px;border:1px solid #ccc;"><option value="">全部</option>';
+                types.forEach(t=>{ html += `<option value="${t}">${t}（${typeMap[t].length}家）</option>`; });
+                html += '</select>';
+                filterDiv.innerHTML = html;
+                document.getElementById('categorySel').onchange = function() {
+                    lastCategory = this.value;
+                    showRestaurants(window._lastRestaurants);
+                };
+            }
+        }
+
+        // 支持自定义分类模板
+        function getCustomType(rawType) {
+            // 详细的分类映射表
+            const typeMap = {
+                '050000': '餐饮服务',
+                '050100': '中餐厅', '050101': '川菜', '050102': '粤菜', '050103': '鲁菜', '050104': '湘菜', 
+                '050105': '浙菜', '050106': '苏菜', '050107': '闽菜', '050108': '徽菜', '050109': '京菜',
+                '050110': '东北菜', '050111': '西北菜', '050112': '云南菜', '050113': '贵州菜', '050114': '江西菜',
+                '050115': '山西菜', '050116': '河南菜', '050117': '河北菜', '050118': '新疆菜', '050119': '湖北菜',
+                '050120': '天津菜', '050121': '上海菜', '050199': '其他中餐厅',
+                '050200': '外国餐厅', '050201': '法国菜', '050202': '意大利菜', '050203': '德国菜', '050204': '俄国菜',
+                '050205': '印度菜', '050206': '日本料理', '050207': '韩国料理', '050208': '泰国菜', '050209': '越南菜',
+                '050210': '美式快餐', '050211': '墨西哥菜', '050212': '巴西菜', '050213': '土耳其菜', 
+                '050214': '阿拉伯菜', '050215': '希腊菜', '050216': '西班牙菜', '050217': '英国菜', 
+                '050218': '葡萄牙菜', '050219': '澳洲菜', '050299': '其他外国菜',
+                '050300': '快餐厅', '050301': '肯德基', '050302': '麦当劳', '050303': '必胜客', 
+                '050304': '德克士', '050305': '吉野家', '050306': '真功夫', '050307': '永和大王', 
+                '050308': '大家乐', '050309': '食其家', '050310': '面点王', '050311': '汉堡王',
+                '050399': '其他快餐',
+                '050400': '休闲餐饮', '050401': '茶馆', '050402': '咖啡厅', '050403': '酒吧', 
+                '050404': 'KTV', '050405': '甜品店', '050406': '冷饮店', '050407': '面包店',
+                '050408': '蛋糕店', '050409': '果汁店', '050410': '奶茶店', '050499': '其他休闲餐饮',
+                '050500': '地方特色餐厅', '050501': '重庆火锅', '050502': '四川火锅', '050503': '涮羊肉',
+                '050504': '烧烤店', '050505': '海鲜', '050506': '小吃快餐店', '050507': '东北饺子馆',
+                '050508': '兰州拉面', '050509': '沙县小吃', '050510': '黄焖鸡米饭', '050511': '重庆小面',
+                '050512': '麻辣烫', '050513': '关东煮', '050514': '煎饼果子', '050515': '肉夹馍',
+                '050516': '驴肉火烧', '050517': '臭豆腐', '050518': '章鱼烧', '050519': '铁板烧',
+                '050520': '韩式烤肉', '050521': '日式烤肉', '050522': '自助餐', '050523': '农家乐',
+                '050599': '其他特色餐厅'
+            };
+            
+            // 先检查精确匹配
+            if (typeMap[rawType]) {
+                return typeMap[rawType];
+            }
+            
+            // 然后检查自定义分类
+            for (let i=0;i<customCategories.length;i++) {
+                if (rawType && rawType.includes(customCategories[i])) return customCategories[i];
+            }
+            
+            // 最后返回原始类型或默认值
+            return rawType || '其他';
+        }
+
+        function showRestaurants(restaurants) {
+            const listDiv = document.getElementById('restaurantList');
+            listDiv.innerHTML = '';
+            if (!restaurants || restaurants.length === 0) return;
+            
+            let typeMap = {};
+            restaurants.forEach(r => {
+                let type = getCustomType(r.type||'');
+                if (!typeMap[type]) typeMap[type] = [];
+                typeMap[type].push(r);
+            });
+            
+            renderCategoryFilter(typeMap);
+            Object.keys(typeMap).forEach(type => {
+                if (lastCategory && type !== lastCategory) return;
+                listDiv.innerHTML += `<div style='font-weight:bold;font-size:16px;color:#0078d4;margin:18px 0 8px 0;'>${type}（${typeMap[type].length}家）</div>`;
+                typeMap[type].forEach(r => {
+                    let html = `<div class="restaurant">
+                        <div class="restaurant-title">${r.name}</div>
+                        <div class="restaurant-info">类型：${r.type || '餐厅'} | 距离：${r.distance ? (r.distance/1000).toFixed(2) : '-'}km</div>
+                        <div class="restaurant-info">地址：${r.address}</div>
+                    </div>`;
+                    listDiv.innerHTML += html;
+                });
+            });
+        }
+
+        // 切换分类方式时自动刷新
+        // 只保留一份事件绑定和初始化流程
+        window.onload = function() {
+            initMap();
+            getLocationAndRecommend();
+            // 刷新按钮
+            document.getElementById('refreshBtn').onclick = function() {
+                lastCategory = '';
+                if (currentQueryPoint) {
+                    searchNearbyRestaurants(currentQueryPoint.lat, currentQueryPoint.lng);
+                } else if (userLocation) {
+                    searchNearbyRestaurants(userLocation.latitude, userLocation.longitude);
+                } else {
+                    getLocationAndRecommend();
+                }
+            };
+            
+            // 随机推荐按钮
+            document.getElementById('randomBtn').onclick = function() {
+                showRandomRecommendation();
+            };
+            
+            // 初始化访问统计
+            initVisitCounter();
+        };
+        
+        // 显示关于信息
+        function showAbout() {
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 400px;
+                text-align: left;
+                border: 2px solid #0078d4;
+            `;
+            
+            popup.innerHTML = `
+                <h3 style="color: #0078d4; margin-bottom: 20px; text-align: center;">🍽️ 关于随机选饭店工具</h3>
+                <div style="line-height: 1.6; color: #333; margin-bottom: 20px;">
+                    <p><strong>功能特色：</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>🎯 精准定位：自动获取您的位置</li>
+                        <li>🗺️ 地图选点：点击地图任意位置搜索</li>
+                        <li>📏 自定义范围：支持米/公里单位</li>
+                        <li>🎲 随机推荐：告别选择困难症</li>
+                        <li>🏷️ 分类筛选：按餐厅类型筛选</li>
+                        <li>🧭 一键导航：直达目标餐厅</li>
+                    </ul>
+                    <p><strong>数据来源：</strong>高德地图API</p>
+                    <p><strong>开发者：</strong>玄墨金学团队</p>
+                    <p><strong>版本：</strong>v2.0 (2025.8.5)</p>
+                </div>
+                <div style="text-align: center;">
+                    <button onclick="this.parentElement.parentElement.remove(); document.querySelector('.about-overlay').remove();" style="background:#0078d4;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">知道了</button>
+                </div>
+            `;
+            
+            // 创建背景遮罩
+            const overlay = document.createElement('div');
+            overlay.className = 'about-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+            `;
+            overlay.onclick = () => {
+                popup.remove();
+                overlay.remove();
+            };
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        }
+        
+        // 简单的访问统计
+        function initVisitCounter() {
+            try {
+                let visitCount = localStorage.getItem('visitCount') || 0;
+                visitCount = parseInt(visitCount) + 1;
+                localStorage.setItem('visitCount', visitCount);
+                document.getElementById('visitCount').textContent = visitCount;
+            } catch (e) {
+                document.getElementById('visitCount').textContent = '已加载';
+            }
+        }
+        function showStatus(msg) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = msg;
+            
+            // 根据消息类型设置不同的样式
+            statusEl.className = '';
+            if (msg.includes('❌') || msg.includes('失败') || msg.includes('错误')) {
+                statusEl.style.color = '#e74c3c';
+                statusEl.style.fontWeight = 'bold';
+            } else if (msg.includes('✅') || msg.includes('成功') || msg.includes('完成')) {
+                statusEl.style.color = '#27ae60';
+                statusEl.style.fontWeight = 'bold';
+            } else if (msg.includes('🔍') || msg.includes('正在')) {
+                statusEl.style.color = '#3498db';
+                statusEl.style.fontWeight = 'normal';
+            } else {
+                statusEl.style.color = '#666';
+                statusEl.style.fontWeight = 'normal';
+            }
+        }
+        function renderPagination(page, totalPage) {
+            // ...可按需补充分页逻辑...
+        }
+    </script>
+</body>
+</html>
